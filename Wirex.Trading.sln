@@ -12,6 +12,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Info", "Solution Info", "{CC95EC3D-7287-4B82-AAA1-56FA635FA266}"
 	ProjectSection(SolutionItems) = preProject
 		CommonAssemblyInfo.cs = CommonAssemblyInfo.cs
+		Instructions.txt = Instructions.txt
 	EndProjectSection
 EndProject
 Global
