@@ -1,16 +1,68 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Threading;
 
 namespace Wirex.Engine
 {
-    public class TradingEngine : ITradingEngine
+    public class TradingEngine : ITradingEngine, IDisposable
     {
-        private readonly List<Order> orders = new List<Order>();
+        private readonly List<Order> orders;
+        private readonly Thread thread;
+        private Dispatcher dispatcher;
 
         public IEnumerable<Order> OpenOrders => orders.AsReadOnly();
 
-        public void Place(Order order)
+        public TradingEngine()
+        {
+            orders = new List<Order>();
+            var autoResetEvent = new AutoResetEvent(false);
+            thread = new Thread(() =>
+            {
+                dispatcher = Dispatcher.CurrentDispatcher;
+                autoResetEvent.Set();
+                Dispatcher.Run();
+            }) {IsBackground = true};
+            thread.Start();
+            autoResetEvent.WaitOne();
+        }
+
+        public void Dispose()
+        {
+            this.thread.Abort();
+        }
+
+        public Task Place(Order order)
+        {
+            return Invoke(() => PlaceSafe(order));
+        }
+
+        public Task MatchOrder(Order one, Order two)
+        {
+            return Invoke(() => MatchOrderSafe(one, two));
+        }
+
+        public Task Invoke(Action action)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+            dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.TrySetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            }));
+            return tcs.Task;
+        }
+
+        private void PlaceSafe(Order order)
         {
             if (order == null) throw new ArgumentNullException(nameof(order));
             OpenOrder(order);
@@ -43,7 +95,7 @@ namespace Wirex.Engine
             }
         }
 
-        public void MatchOrder(Order one, Order two)
+        private void MatchOrderSafe(Order one, Order two)
         {
             if (!one.CurrencyPair.Equals(two.CurrencyPair))
                 throw new InvalidOperationException("Orders should have the same currency pair.");
