@@ -2,7 +2,7 @@
 
 namespace Wirex.Engine
 {
-    public class TradingEngine: ITradingEngine
+    public class TradingEngine : ITradingEngine
     {
         public void Place(Order order)
         {

@@ -10,6 +10,7 @@
 
         public string BaseCurrency { get; }
         public string QuoteCurrency { get; }
+
         public override string ToString()
         {
             return $"{BaseCurrency}/,{QuoteCurrency}";
@@ -24,7 +25,7 @@
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((CurrencyPair) obj);
         }
 
@@ -32,10 +33,8 @@
         {
             unchecked
             {
-                return ((BaseCurrency?.GetHashCode() ?? 0)*397) ^ (QuoteCurrency?.GetHashCode() ?? 0);
+                return ((BaseCurrency?.GetHashCode() ?? 0) * 397) ^ (QuoteCurrency?.GetHashCode() ?? 0);
             }
         }
-
-       
     }
 }

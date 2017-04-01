@@ -4,7 +4,7 @@ namespace Wirex.Engine
 {
     public class Order
     {
-        public Order(CurrencyPair currencyPair,Side side, decimal price, decimal amount)
+        public Order(CurrencyPair currencyPair, Side side, decimal price, decimal amount)
         {
             Id = Guid.NewGuid();
             CurrencyPair = currencyPair;
@@ -15,10 +15,10 @@ namespace Wirex.Engine
         }
 
         public Guid Id { get; }
-        public CurrencyPair CurrencyPair { get; private set; }
-        public decimal Price { get; private set; }
-        public Side Side { get; private set; }
-        public decimal Amount { get; private set; }
+        public CurrencyPair CurrencyPair { get; }
+        public decimal Price { get; }
+        public Side Side { get; }
+        public decimal Amount { get; }
         public decimal RemainingAmount { get; set; }
 
         protected bool Equals(Order other)
@@ -41,7 +41,8 @@ namespace Wirex.Engine
 
         public override string ToString()
         {
-            return $"Id: {Id}, CurrencyPair: {CurrencyPair}, Price: {Price}, Side: {Side}, Amount: {Amount}, RemainingAmount: {RemainingAmount}";
+            return
+                $"Id: {Id}, CurrencyPair: {CurrencyPair}, Price: {Price}, Side: {Side}, Amount: {Amount}, RemainingAmount: {RemainingAmount}";
         }
     }
 }

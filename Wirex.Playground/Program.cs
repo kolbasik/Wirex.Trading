@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Threading;
 using System.Threading.Tasks;
 using Wirex.Engine;
 
@@ -13,18 +12,14 @@ namespace Wirex.Playground
         private static void Main(string[] args)
         {
             ITradingEngine engine = new TradingEngine();
-            ConcurrentQueue<Order> orders = new ConcurrentQueue<Order>(OrderGenerator.Generate("USD", "EUR", 0.93, 0.99));
+            var orders = new ConcurrentQueue<Order>(OrderGenerator.Generate("USD", "EUR", 0.93, 0.99));
 
             //Observe results
             engine.OrderClosed += OutputResult;
 
             //Simulate multi-threading environment
             for (var i = 0; i < threadCount; i++)
-            {
                 Task.Run(() => PlaceOrder(engine, orders));
-            }
-
-            
 
 
             Console.ReadLine();
@@ -39,9 +34,7 @@ namespace Wirex.Playground
         {
             Order order;
             while (orders.TryDequeue(out order))
-            {
                 engine.Place(order);
-            }
         }
     }
 }
