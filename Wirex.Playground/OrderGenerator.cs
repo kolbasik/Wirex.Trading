@@ -4,21 +4,28 @@ using Wirex.Engine;
 
 namespace Wirex.Playground
 {
-    public class OrderGenerator
+    public sealed class OrderGenerator
     {
-        private const int Ordercount = 100;
+        private readonly int orderCount;
 
-        public static IEnumerable<Order> Generate(string baseCurrency, string quoteCurrency, double minPrice,
+        public OrderGenerator(int orderCount)
+        {
+            this.orderCount = orderCount;
+        }
+
+        public IEnumerable<Order> Generate(
+            string baseCurrency,
+            string quoteCurrency,
+            double minPrice,
             double maxPrice)
         {
-            var price = new TRandom();
-            var amount = new TRandom();
-            for (var i = 0; i < Ordercount; i++)
+            var random = new TRandom();
+            for (var i = 0; i < orderCount; i++)
             {
                 yield return new Order(new CurrencyPair(baseCurrency, quoteCurrency), Side.Buy,
-                    decimal.Round((decimal) price.NextDouble(minPrice, maxPrice), 4), amount.Next(1, 100));
+                    decimal.Round((decimal) random.NextDouble(minPrice, maxPrice), 4), random.Next(1, 100));
                 yield return new Order(new CurrencyPair(baseCurrency, quoteCurrency), Side.Sell,
-                    decimal.Round((decimal) price.NextDouble(minPrice, maxPrice), 4), amount.Next(1, 100));
+                    decimal.Round((decimal) random.NextDouble(minPrice, maxPrice), 4), random.Next(1, 100));
             }
         }
     }

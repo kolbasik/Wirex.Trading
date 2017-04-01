@@ -2,7 +2,7 @@
 
 namespace Wirex.Engine
 {
-    public class Order
+    public class Order : IEquatable<Order>
     {
         public Order(CurrencyPair currencyPair, Side side, decimal price, decimal amount)
         {
@@ -21,9 +21,9 @@ namespace Wirex.Engine
         public decimal Amount { get; }
         public decimal RemainingAmount { get; set; }
 
-        protected bool Equals(Order other)
+        public bool Equals(Order other)
         {
-            return Id.Equals(other.Id);
+            return other != null && Id.Equals(other.Id);
         }
 
         public override bool Equals(object obj)

@@ -1,6 +1,8 @@
-﻿namespace Wirex.Engine
+﻿using System;
+
+namespace Wirex.Engine
 {
-    public class CurrencyPair
+    public class CurrencyPair : IEquatable<CurrencyPair>
     {
         public CurrencyPair(string baseCurrency, string quoteCurrency)
         {
@@ -11,14 +13,10 @@
         public string BaseCurrency { get; }
         public string QuoteCurrency { get; }
 
-        public override string ToString()
+        public bool Equals(CurrencyPair other)
         {
-            return $"{BaseCurrency}/,{QuoteCurrency}";
-        }
-
-        protected bool Equals(CurrencyPair other)
-        {
-            return string.Equals(BaseCurrency, other.BaseCurrency) && string.Equals(QuoteCurrency, other.QuoteCurrency);
+            return other != null && string.Equals(BaseCurrency, other.BaseCurrency) &&
+                   string.Equals(QuoteCurrency, other.QuoteCurrency);
         }
 
         public override bool Equals(object obj)
@@ -35,6 +33,11 @@
             {
                 return ((BaseCurrency?.GetHashCode() ?? 0) * 397) ^ (QuoteCurrency?.GetHashCode() ?? 0);
             }
+        }
+
+        public override string ToString()
+        {
+            return $"{BaseCurrency}/,{QuoteCurrency}";
         }
     }
 }

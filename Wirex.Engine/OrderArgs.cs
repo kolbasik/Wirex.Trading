@@ -6,6 +6,7 @@ namespace Wirex.Engine
     {
         public OrderArgs(Order order)
         {
+            if (order == null) throw new ArgumentNullException(nameof(order));
             Order = order;
         }
 

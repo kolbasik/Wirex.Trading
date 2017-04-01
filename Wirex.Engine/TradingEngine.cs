@@ -6,11 +6,12 @@ namespace Wirex.Engine
     {
         public void Place(Order order)
         {
-            if (OrderClosed != null) OrderClosed(this, new OrderArgs(order));
+            if (order == null) throw new ArgumentNullException(nameof(order));
+            OrderClosed.Invoke(this, new OrderArgs(order));
         }
 
-        public event EventHandler<OrderArgs> OrderOpened;
+        public event EventHandler<OrderArgs> OrderOpened = delegate { };
 
-        public event EventHandler<OrderArgs> OrderClosed;
+        public event EventHandler<OrderArgs> OrderClosed = delegate { };
     }
 }

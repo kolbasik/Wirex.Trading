@@ -7,20 +7,19 @@ namespace Wirex.Playground
 {
     internal class Program
     {
-        private static readonly int threadCount = 10;
+        private const int ThreadCount = 10;
+        private const int OrderCount = 100;
 
         private static void Main(string[] args)
         {
             ITradingEngine engine = new TradingEngine();
-            var orders = new ConcurrentQueue<Order>(OrderGenerator.Generate("USD", "EUR", 0.93, 0.99));
-
             //Observe results
             engine.OrderClosed += OutputResult;
 
             //Simulate multi-threading environment
-            for (var i = 0; i < threadCount; i++)
+            var orders = new ConcurrentQueue<Order>(new OrderGenerator(OrderCount).Generate("USD", "EUR", 0.93, 0.99));
+            for (var i = 0; i < ThreadCount; i++)
                 Task.Run(() => PlaceOrder(engine, orders));
-
 
             Console.ReadLine();
         }
