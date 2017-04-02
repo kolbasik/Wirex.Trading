@@ -1,65 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Threading;
 
 namespace Wirex.Engine
 {
     public class TradingEngine : ITradingEngine, IDisposable
     {
         private readonly List<Order> orders;
-        private readonly Thread thread;
-        private Dispatcher dispatcher;
+        private readonly IWorker worker;
 
         public IEnumerable<Order> OpenOrders => orders.AsReadOnly();
 
-        public TradingEngine()
+        public TradingEngine() : this(new Worker())
         {
+        }
+
+        public TradingEngine(IWorker worker)
+        {
+            if (worker == null) throw new ArgumentNullException(nameof(worker));
+            this.worker = worker;
             orders = new List<Order>();
-            var autoResetEvent = new AutoResetEvent(false);
-            thread = new Thread(() =>
-            {
-                dispatcher = Dispatcher.CurrentDispatcher;
-                autoResetEvent.Set();
-                Dispatcher.Run();
-            }) {IsBackground = true};
-            thread.Start();
-            autoResetEvent.WaitOne();
         }
 
         public void Dispose()
         {
-            this.thread.Abort();
+            this.worker.Dispose();
         }
 
         public Task Place(Order order)
         {
-            return Invoke(() => PlaceSafe(order));
+            return worker.Invoke(() => PlaceSafe(order));
         }
 
         public Task MatchOrder(Order one, Order two)
         {
-            return Invoke(() => MatchOrderSafe(one, two));
-        }
-
-        public Task Invoke(Action action)
-        {
-            var tcs = new TaskCompletionSource<bool>();
-            dispatcher.BeginInvoke(new Action(() =>
-            {
-                try
-                {
-                    action();
-                    tcs.TrySetResult(true);
-                }
-                catch (Exception ex)
-                {
-                    tcs.TrySetException(ex);
-                }
-            }));
-            return tcs.Task;
+            return worker.Invoke(() => MatchOrderSafe(one, two));
         }
 
         private void PlaceSafe(Order order)
@@ -75,7 +51,7 @@ namespace Wirex.Engine
                         .Where(buy => buy.Price >= sell.Price && buy.CurrencyPair.Equals(sell.CurrencyPair));
                     foreach (var buy in buys.ToList())
                     {
-                        MatchOrder(buy, sell);
+                        MatchOrderSafe(buy, sell);
                     }
                     break;
                 }
@@ -86,7 +62,7 @@ namespace Wirex.Engine
                         .Where(sell => sell.Price <= buy.Price && sell.CurrencyPair.Equals(buy.CurrencyPair));
                     foreach (var sell in sells.ToList())
                     {
-                        MatchOrder(sell, buy);
+                        MatchOrderSafe(sell, buy);
                     }
                     break;
                 }
