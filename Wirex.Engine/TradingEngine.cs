@@ -1,41 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using Wirex.Engine.Core;
 
 namespace Wirex.Engine
 {
     public class TradingEngine : ITradingEngine, IDisposable
     {
         private readonly List<Order> orders;
-        private readonly IWorker worker;
+        private readonly Executor executor;
+        private readonly Executor notifier;
+
+        public event EventHandler<OrderArgs> OrderOpened = delegate { };
+        public event EventHandler<OrderArgs> OrderClosed = delegate { };
 
         public IEnumerable<Order> OpenOrders => orders.AsReadOnly();
+        public Executor Executor => executor;
+        public Executor Notifier => notifier;
 
-        public TradingEngine() : this(new Worker())
+        public TradingEngine() : this(Executors.Dispatcher, Executors.ThreadPool)
         {
         }
 
-        public TradingEngine(IWorker worker)
+        public TradingEngine(Func<Executor> createExecutor, Func<Executor> createNotifier)
         {
-            if (worker == null) throw new ArgumentNullException(nameof(worker));
-            this.worker = worker;
+            if (createExecutor == null) throw new ArgumentNullException(nameof(createExecutor));
+            if (createNotifier == null) throw new ArgumentNullException(nameof(createNotifier));
+            this.executor = createExecutor();
+            this.notifier = createNotifier();
             orders = new List<Order>();
         }
 
         public void Dispose()
         {
-            this.worker.Dispose();
+            executor.Dispose();
+            notifier.Dispose();
         }
 
-        public Task Place(Order order)
+        public void Place(Order order)
         {
-            return worker.Invoke(() => PlaceSafe(order));
+            executor.Invoke(() => PlaceSafe(order));
         }
 
-        public Task MatchOrder(Order one, Order two)
+        public void MatchOrder(Order one, Order two)
         {
-            return worker.Invoke(() => MatchOrderSafe(one, two));
+            executor.Invoke(() => MatchOrderSafe(one, two));
         }
 
         private void PlaceSafe(Order order)
@@ -50,9 +59,8 @@ namespace Wirex.Engine
                     var buys = orders.Where(x => x.Side == Side.Buy)
                         .Where(buy => buy.Price >= sell.Price && buy.CurrencyPair.Equals(sell.CurrencyPair));
                     foreach (var buy in buys.ToList())
-                    {
-                        MatchOrderSafe(buy, sell);
-                    }
+                        if (MatchOrderSafe(sell, buy))
+                            break;
                     break;
                 }
                 case Side.Buy:
@@ -61,9 +69,8 @@ namespace Wirex.Engine
                     var sells = orders.Where(x => x.Side == Side.Sell)
                         .Where(sell => sell.Price <= buy.Price && sell.CurrencyPair.Equals(buy.CurrencyPair));
                     foreach (var sell in sells.ToList())
-                    {
-                        MatchOrderSafe(sell, buy);
-                    }
+                        if (MatchOrderSafe(buy, sell))
+                            break;
                     break;
                 }
                 default:
@@ -71,7 +78,7 @@ namespace Wirex.Engine
             }
         }
 
-        private void MatchOrderSafe(Order one, Order two)
+        private bool MatchOrderSafe(Order one, Order two)
         {
             if (!one.CurrencyPair.Equals(two.CurrencyPair))
                 throw new InvalidOperationException("Orders should have the same currency pair.");
@@ -88,34 +95,30 @@ namespace Wirex.Engine
             {
                 one.RemainingAmount -= two.RemainingAmount;
                 CloseOrder(two);
+                return false;
             }
-            else if (one.RemainingAmount < two.RemainingAmount)
+            if (one.RemainingAmount < two.RemainingAmount)
             {
                 two.RemainingAmount -= one.RemainingAmount;
                 CloseOrder(one);
+                return true;
             }
-            else
-            {
-                CloseOrder(one);
-                CloseOrder(two);
-            }
+            CloseOrder(one);
+            CloseOrder(two);
+            return true;
         }
 
         private void OpenOrder(Order order)
         {
             orders.Add(order);
-            OrderOpened.Invoke(this, new OrderArgs(order));
+            notifier.Invoke(() => OrderOpened.Invoke(this, new OrderArgs(order)));
         }
 
         private void CloseOrder(Order order)
         {
-            orders.Remove(order);
             order.RemainingAmount = 0;
-            OrderClosed.Invoke(this, new OrderArgs(order));
+            orders.Remove(order);
+            notifier.Invoke(() => OrderClosed.Invoke(this, new OrderArgs(order)));
         }
-
-        public event EventHandler<OrderArgs> OrderOpened = delegate { };
-
-        public event EventHandler<OrderArgs> OrderClosed = delegate { };
     }
 }

@@ -41,7 +41,8 @@ namespace Wirex.Engine
 
         public override string ToString()
         {
-            return $"{nameof(Id)}: {Id}, {nameof(Side)}: {Side}, {nameof(Price)}: {Price}, {nameof(CurrencyPair)}: {CurrencyPair}, {nameof(Amount)}: {Amount}, {nameof(RemainingAmount)}: {RemainingAmount}";
+            return
+                $"{nameof(Id)}: {Id}, {nameof(Side)}: {Side}, {nameof(Price)}: {Price}, {nameof(CurrencyPair)}: {CurrencyPair}, {nameof(Amount)}: {Amount}, {nameof(RemainingAmount)}: {RemainingAmount}";
         }
     }
 }

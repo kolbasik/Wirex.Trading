@@ -5,7 +5,7 @@ namespace Wirex.Engine
 {
     public interface ITradingEngine
     {
-        Task Place(Order order);
+        void Place(Order order);
         event EventHandler<OrderArgs> OrderOpened;
         event EventHandler<OrderArgs> OrderClosed;
     }
