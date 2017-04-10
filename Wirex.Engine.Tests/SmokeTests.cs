@@ -54,19 +54,12 @@ namespace Wirex.Engine.Tests
             {
                 // arrange
                 var orders = GenerateOrders(orderCount);
-                var openedOrders = new List<Order>();
-                var closedOrders = new List<Order>();
 
-                tradingEngine.OrderOpened += (sender, args) =>
-                {
-                    openedOrders.Add(args.Order);
-                    output.WriteLine($"Opened: {args.Order}");
-                };
-                tradingEngine.OrderClosed += (sender, args) =>
-                {
-                    closedOrders.Add(args.Order);
-                    output.WriteLine($"Closed: {args.Order}");
-                };
+                var spy = new TradingEngineSpy();
+                spy.ListenTo(tradingEngine);
+
+                tradingEngine.OrderOpened += (sender, args) => output.WriteLine($"Opened: {args.Order}");
+                tradingEngine.OrderClosed += (sender, args) => output.WriteLine($"Closed: {args.Order}");
 
                 // act
                 foreach (var order in orders)
@@ -79,16 +72,12 @@ namespace Wirex.Engine.Tests
                         output.WriteLine(openOrder.ToString());
                     }
                     output.WriteLine("--------------------------------");
-                    output.WriteLine($"Total: {openedOrders.Sum(x => x.Amount)}, Remaining: {openedOrders.Sum(x => x.RemainingAmount)}, Closed: {closedOrders.Sum(x => x.Amount)}");
+                    output.WriteLine($"Total: {spy.OpenedOrders.Sum(x => x.Amount)}, Remaining: {spy.OpenedOrders.Sum(x => x.RemainingAmount)}, Closed: {spy.ClosedOrders.Sum(x => x.Amount)}");
                     output.WriteLine("--------------------------------");
                 }
 
                 // assert
-                Assert.Equal(orderCount, openedOrders.Count);
-                Assert.InRange(closedOrders.Count, 0, orderCount);
-                Assert.Equal(orders, openedOrders);
-                Assert.Equal(openedOrders.Distinct().OrderBy(x => x.Id), openedOrders.OrderBy(x => x.Id));
-                Assert.Equal(closedOrders.Distinct().OrderBy(x => x.Id), closedOrders.OrderBy(x => x.Id));
+                spy.Verify(orders);
             }
         }
 
@@ -111,11 +100,10 @@ namespace Wirex.Engine.Tests
                 // arrange
                 var orders = GenerateOrders(orderCount);
 
+                var spy = new TradingEngineSpy();
+                spy.ListenTo(tradingEngine);
+
                 // act
-                var openedOrders = new List<Order>();
-                var closedOrders = new List<Order>();
-                tradingEngine.OrderOpened += (sender, args) => openedOrders.Add(args.Order);
-                tradingEngine.OrderClosed += (sender, args) => closedOrders.Add(args.Order);
                 foreach (var order in orders)
                 {
                     tradingEngine.Place(order);
@@ -123,11 +111,7 @@ namespace Wirex.Engine.Tests
                 await dispatcher.Submit(() => output.WriteLine("done."));
 
                 // assert
-                Assert.Equal(orderCount, openedOrders.Count);
-                Assert.InRange(closedOrders.Count, 0, orderCount);
-                Assert.Equal(orders, openedOrders);
-                Assert.Equal(openedOrders.Distinct().OrderBy(x => x.Id), openedOrders.OrderBy(x => x.Id));
-                Assert.Equal(closedOrders.Distinct().OrderBy(x => x.Id), closedOrders.OrderBy(x => x.Id));
+                spy.Verify(orders);
             }
         }
 
@@ -150,20 +134,42 @@ namespace Wirex.Engine.Tests
                 // arrange
                 var orders = GenerateOrders(orderCount);
 
+                var spy = new TradingEngineSpy();
+                spy.ListenTo(tradingEngine);
+
                 // act
-                var openedOrders = new List<Order>();
-                var closedOrders = new List<Order>();
-                tradingEngine.OrderOpened += (sender, args) => openedOrders.Add(args.Order);
-                tradingEngine.OrderClosed += (sender, args) => closedOrders.Add(args.Order);
                 orders.ForEach(order => tradingEngine.Place(order));
                 await dispatcher.Submit(() => output.WriteLine("done."));
 
                 // assert
-                Assert.Equal(orderCount, openedOrders.Count);
-                Assert.InRange(closedOrders.Count, 0, orderCount);
-                Assert.Equal(orders, openedOrders);
-                Assert.Equal(openedOrders.Distinct().OrderBy(x => x.Id), openedOrders.OrderBy(x => x.Id));
-                Assert.Equal(closedOrders.Distinct().OrderBy(x => x.Id), closedOrders.OrderBy(x => x.Id));
+                spy.Verify(orders);
+            }
+        }
+
+        private sealed class TradingEngineSpy
+        {
+            public readonly List<Order> OpenedOrders;
+            public readonly List<Order> ClosedOrders;
+
+            public TradingEngineSpy()
+            {
+                OpenedOrders = new List<Order>();
+                ClosedOrders = new List<Order>();
+            }
+
+            public void ListenTo(ITradingEngine tradingEngine)
+            {
+                tradingEngine.OrderOpened += (sender, args) => OpenedOrders.Add(args.Order);
+                tradingEngine.OrderClosed += (sender, args) => ClosedOrders.Add(args.Order);
+            }
+
+            public void Verify(List<Order> orders)
+            {
+                Assert.Equal(orders, OpenedOrders);
+                Assert.InRange(ClosedOrders.Count, 0, orders.Count);
+                Assert.Equal(OpenedOrders.Distinct().OrderBy(x => x.Id), OpenedOrders.OrderBy(x => x.Id));
+                Assert.Equal(ClosedOrders.Distinct().OrderBy(x => x.Id), ClosedOrders.OrderBy(x => x.Id));
+                Assert.InRange(OpenedOrders.Sum(x => x.RemainingAmount) + ClosedOrders.Sum(x => x.Amount), 0, orders.Sum(x => x.Amount));
             }
         }
     }
